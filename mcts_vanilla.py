@@ -2,7 +2,7 @@
 from mcts_node import MCTSNode
 from p2_t3 import Board
 from random import choice
-from math import sqrt, log
+from math import sqrt, log, e
 
 num_nodes = 100
 explore_faction = 2.
@@ -22,8 +22,33 @@ def traverse_nodes(node: MCTSNode, board: Board, state, bot_identity: int):
         node: A node from which the next stage of the search can proceed.
         state: The state associated with that node
 
-    """
-    pass
+    """    
+    # if current node has untried actions, just return it 
+    if (len(node.untried_actions) > 0):
+        node.visits += 1
+        return node, state
+    
+    # from lecture slides: Walk the game tree picking child nodes with the highest value of this formula. Return a node with untried actions to expand.
+    # stopping criteria: no node has untried actions OR game has ended
+    while (node is not None and len(node.untried_actions) == 0): #  is_win(board, state, bot_identity) == False 
+        # for each node, find the child with the highest value, and traverse that child using UCT algorithm
+        highest_value = 0
+        best_node = None
+        children = node.child_nodes
+        node.visits += 1
+        for child in children:
+            wins = child.wins
+            vists = child.visits
+            total_vists = node.visits
+            explotation_factor = (wins/vists)
+            exploration_factor = explore_faction * sqrt(log(total_vists, e)/vists)
+            value = explotation_factor + exploration_factor
+            if (value >= highest_value):
+                highest_value = value
+                best_node = child
+        node = best_node
+
+    return node, state
 
 def expand_leaf(node: MCTSNode, board: Board, state):
     """ Adds a new leaf to the tree by creating a new child node for the given node (if it is non-terminal).
@@ -109,6 +134,12 @@ def think(board: Board, current_state):
     for _ in range(num_nodes):
         state = current_state
         node = root_node
+        best_unexpended_node, state = traverse_nodes(node, board, current_state, bot_identity)
+        print("next node: ", best_unexpended_node, " state: ", state)
+        # child_node, state = expand_leaf(best_unexpended_node, state)
+        # rollout(board, state)
+
+        # best_unexpended_node.untried_actions = board.legal_actions(state)
 
         # Do MCTS - This is all you!
         # ...
