@@ -3,7 +3,7 @@ from p2_t3 import Board
 from random import choice
 from math import sqrt, log, e
 
-num_nodes = 1000
+num_nodes = 200
 explore_faction = 2.
 
 
@@ -148,6 +148,23 @@ def get_heuristic(board_state, bot_identity):
         bot_score += 1 
     return player_score - bot_score
 
+positions = dict(
+    ((r, c), 1 << (3 * r + c))
+    for r in range(3)
+    for c in range(3)
+)
+
+def get_cell_owner(state, board_r, board_c, pos_r, pos_c):
+    board_index = 3 * board_r + board_c
+    p1_bitmask = state[2*board_index]
+    p2_bitmask = state[2*board_index+1]
+    is_p1 = (p1_bitmask & positions[(pos_r, pos_c)]) > 0
+    is_p2 = (p2_bitmask & positions[(pos_r, pos_c)]) > 0
+    if is_p1:
+        return 1
+    if is_p2:
+        return 2
+    return 0
 
 def rollout(board: Board, state, bot_identity: int):
     """ Given the state of the game, the rollout plays out the remainder randomly.
@@ -179,16 +196,19 @@ def rollout(board: Board, state, bot_identity: int):
         for action in actions:
             next_state = board.next_state(state, action)
             # get smaller board
-            unpack = board.unpack_state(next_state)
             board_row = action[0]
             board_col = action[1]
-            b = {(0,0): 0, (0,1): 0, (0,2): 0, (1,0): 0, (1,1): 0, (1,2): 0, (2,0): 0, (2,1): 0, (2,2): 0}
-            for piece in unpack['pieces']:
-                if piece['outer-row'] == board_row and piece['outer-column'] == board_col:
-                    row_index = piece['inner-row']
-                    col_index = piece['inner-column']
-                    b[(row_index, col_index)] = piece['player']
-            # print("new board: ", b)
+
+            b = {(0,0): get_cell_owner(next_state, board_row, board_col, 0, 0), 
+                  (0,1): get_cell_owner(next_state, board_row, board_col, 0, 1), 
+                  (0,2): get_cell_owner(next_state, board_row, board_col, 0, 2), 
+                  (1,0): get_cell_owner(next_state, board_row, board_col, 1, 0), 
+                  (1,1): get_cell_owner(next_state, board_row, board_col, 1, 1), 
+                  (1,2): get_cell_owner(next_state, board_row, board_col, 1, 2), 
+                  (2,0): get_cell_owner(next_state, board_row, board_col, 2, 0), 
+                  (2,1): get_cell_owner(next_state, board_row, board_col, 2, 1), 
+                  (2,2): get_cell_owner(next_state, board_row, board_col, 2, 2)}
+
             # print(board.owned_boxes(next_state))
             score = get_heuristic(b, bot_identity)
             if score > best_score:
