@@ -32,7 +32,7 @@ if p2 not in players:
 player1 = players[p1]
 player2 = players[p2]
 
-rounds = 100
+rounds = 10
 wins = {'draw':0, 1:0, 2:0}
 
 start = time()  # To log how much time the simulation takes.
@@ -58,6 +58,8 @@ for i in range(rounds):
         winner = 2
     print("The %s bot wins this round! (%s)" % (winner, str(final_score)))
     wins[winner] = wins.get(winner, 0) + 1
+    print("current win counts:", dict(wins))
+
 
 print("")
 print("Final win counts:", dict(wins))
