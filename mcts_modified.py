@@ -3,7 +3,7 @@ from p2_t3 import Board
 from random import choice
 from math import sqrt, log, e
 
-num_nodes = 100
+num_nodes = 1000
 explore_faction = 2.
 
 
@@ -148,6 +148,7 @@ def get_heuristic(board_state, bot_identity):
         bot_score += 1 
     return player_score - bot_score
 
+
 def rollout(board: Board, state, bot_identity: int):
     """ Given the state of the game, the rollout plays out the remainder randomly.
 
@@ -170,34 +171,32 @@ def rollout(board: Board, state, bot_identity: int):
     # h(x)
     # rows x can win - rows o can win
     # if x wins a row, +inf
-    # if lose, -inf
-    # print("STATE:", state)
-    # print("UNPACK STATE:", board.unpack_state(state))
-
+    # if lose, -inf    
     while not board.is_ended(state):
         actions = board.legal_actions(state)
         best_score = float('-inf')
         best_action = None
         for action in actions:
             next_state = board.next_state(state, action)
-            if board.is_ended(next_state) and is_win(board, next_state, bot_identity):
-                return next_state
-            # print("PREV OWNED BOXES:", board.owned_boxes(state))
-            # print("action made: ", action)
-            # print("CURRENT OWNED BOXES:", board.owned_boxes(next_state))
-
-            completed_boxes = board.owned_boxes(next_state)
-            score = get_heuristic(completed_boxes, bot_identity)
+            # get smaller board
+            unpack = board.unpack_state(next_state)
+            board_row = action[0]
+            board_col = action[1]
+            b = {(0,0): 0, (0,1): 0, (0,2): 0, (1,0): 0, (1,1): 0, (1,2): 0, (2,0): 0, (2,1): 0, (2,2): 0}
+            for piece in unpack['pieces']:
+                if piece['outer-row'] == board_row and piece['outer-column'] == board_col:
+                    row_index = piece['inner-row']
+                    col_index = piece['inner-column']
+                    b[(row_index, col_index)] = piece['player']
+            # print("new board: ", b)
+            # print(board.owned_boxes(next_state))
+            score = get_heuristic(b, bot_identity)
             if score > best_score:
                 best_action = action
                 best_score = score
-            #print(board.owned_boxes(next_state))
+            
         # print("SCORE: ", best_score)
         state = board.next_state(state, best_action)
-            
-        # action = choice(actions)
-        # state = board.next_state(state, action)
-
     return state
 
 
@@ -293,9 +292,9 @@ def think(board: Board, current_state):
     # Return an action, typically the most frequently used action (from the root) or the action with the best
     # estimated win rate.
     best_action = get_best_action(root_node)
-    temp_state = board.next_state(state, best_action)
-    board_state = board.owned_boxes(temp_state)
-    h = get_heuristic(board_state, bot_identity)
+    # temp_state = board.next_state(state, best_action)
+    # board_state = board.owned_boxes(temp_state)
+    # h = get_heuristic(board_state, bot_identity)
     # print("Heristic: ", h)
 
     # print(f"Action chosen: {best_action}")
