@@ -49,7 +49,7 @@ def traverse_nodes(node: MCTSNode, board: Board, state, bot_identity: int):
         if node.untried_actions:
             return node, state
 
-        #terminal node
+        # terminal node
         if not node.untried_actions and not node.child_nodes:
             return node, state
 
@@ -94,15 +94,20 @@ def expand_leaf(node: MCTSNode, board: Board, state):
         return child, new_state
     return None, state
 
-def get_heuristic(board_state, bot_identity):
+
+def get_heuristic(board: Board, state, bot_identity):
+    board_state = board.owned_boxes(state)
     player = bot_identity
-    bot = 1
-    if player==1:
-        bot = 2
+    bot = 3 - bot_identity
+    is_player_turn = board.current_player(state) == player
     player_score = 0
     bot_score = 0
     for r in range(3):
         row = [board_state[(r, 0)], board_state[(r, 1)], board_state[(r, 2)]]
+        if all(row) is player:
+            return 8 if is_player_turn else -8
+        elif all(row) is bot:
+            return -8 if is_player_turn else -8
         if player in row and bot in row:
             continue
         elif player in row:
@@ -111,10 +116,14 @@ def get_heuristic(board_state, bot_identity):
             bot_score += 1
         else:
             player_score += 1
-            bot_score += 1 
+            bot_score += 1
 
     for c in range(3):
         col = [board_state[(0, c)], board_state[(1, c)], board_state[(2, c)]]
+        if all(col) is player:
+            return 8 if is_player_turn else -8
+        elif all(col) is bot:
+            return -8 if is_player_turn else 8
         if player in col and bot in col:
             continue
         elif player in col:
@@ -123,9 +132,13 @@ def get_heuristic(board_state, bot_identity):
             bot_score += 1
         else:
             player_score += 1
-            bot_score += 1 
-        
+            bot_score += 1
+
     diag = [board_state[(0, 0)], board_state[(1, 1)], board_state[(2, 2)]]
+    if all(diag) is player:
+        return 8 if is_player_turn else -8
+    elif all(diag) is bot:
+        return -8 if is_player_turn else 8
     if player in diag and bot in diag:
         pass
     elif player in diag:
@@ -134,9 +147,13 @@ def get_heuristic(board_state, bot_identity):
         bot_score += 1
     else:
         player_score += 1
-        bot_score += 1 
-    
+        bot_score += 1
+
     diag = [board_state[(0, 2)], board_state[(1, 1)], board_state[(2, 0)]]
+    if all(diag) is player:
+        return 8 if is_player_turn else -8
+    elif all(diag) is bot:
+        return -8 if is_player_turn else 8
     if player in diag and bot in diag:
         pass
     elif player in diag:
@@ -145,8 +162,9 @@ def get_heuristic(board_state, bot_identity):
         bot_score += 1
     else:
         player_score += 1
-        bot_score += 1 
-    return player_score - bot_score
+        bot_score += 1
+    return (player_score - bot_score) if is_player_turn else (bot_score - player_score)
+
 
 def rollout(board: Board, state, bot_identity: int):
     """ Given the state of the game, the rollout plays out the remainder randomly.
@@ -154,7 +172,8 @@ def rollout(board: Board, state, bot_identity: int):
     Args:
         board:  The game setup.
         state:  The state of the game.
-    
+        bot_identity: Player number
+
     Returns:
         state: The terminal game state
 
@@ -174,6 +193,11 @@ def rollout(board: Board, state, bot_identity: int):
     # print("STATE:", state)
     # print("UNPACK STATE:", board.unpack_state(state))
 
+    #two checks
+    # check small board for is_winning, is_losing, stalemate/draw
+    # keep track in our own board rep
+    # calc heuristic on big board, reverse heuristic on opponent's turn
+
     while not board.is_ended(state):
         actions = board.legal_actions(state)
         best_score = float('-inf')
@@ -182,22 +206,11 @@ def rollout(board: Board, state, bot_identity: int):
             next_state = board.next_state(state, action)
             if board.is_ended(next_state) and is_win(board, next_state, bot_identity):
                 return next_state
-            # print("PREV OWNED BOXES:", board.owned_boxes(state))
-            # print("action made: ", action)
-            # print("CURRENT OWNED BOXES:", board.owned_boxes(next_state))
-
-            completed_boxes = board.owned_boxes(next_state)
-            score = get_heuristic(completed_boxes, bot_identity)
-            if score > best_score:
+            score = get_heuristic(board, state, bot_identity)
+            if score >= best_score:
                 best_action = action
                 best_score = score
-            #print(board.owned_boxes(next_state))
-        # print("SCORE: ", best_score)
         state = board.next_state(state, best_action)
-            
-        # action = choice(actions)
-        # state = board.next_state(state, action)
-
     return state
 
 
@@ -294,9 +307,8 @@ def think(board: Board, current_state):
     # estimated win rate.
     best_action = get_best_action(root_node)
     temp_state = board.next_state(state, best_action)
-    board_state = board.owned_boxes(temp_state)
-    h = get_heuristic(board_state, bot_identity)
-    # print("Heristic: ", h)
+    h = get_heuristic(board, temp_state, bot_identity)
+    print("Heuristic: ", h)
 
-    # print(f"Action chosen: {best_action}")
+    print(f"Action chosen: {best_action}")
     return best_action
