@@ -3,7 +3,7 @@ from p2_t3 import Board
 from random import choice
 from math import sqrt, log, e
 
-num_nodes = 100
+num_nodes = 1000
 explore_faction = 2.
 
 positions = dict(
@@ -206,11 +206,11 @@ def get_subbox_score(board: Board, state, action, bot_identity):
             player_score += 1
             bot_score += 1
         elif all(value == player for value in values):
-            player_score = 0
+            player_score = 8
             bot_score = 0
             break
         elif all(value == bot for value in values):
-            bot_score = 0
+            bot_score = 8
             player_score = 0
             break
         elif player in values and bot in values:
@@ -225,24 +225,56 @@ def get_subbox_score(board: Board, state, action, bot_identity):
 
 
 def get_heuristic(board: Board, state, bot_identity):
+    winning_combinations = [
+        [(0, 0), (0, 1), (0, 2)],  # Row 1
+        [(1, 0), (1, 1), (1, 2)],  # Row 2
+        [(2, 0), (2, 1), (2, 2)],  # Row 3
+        [(0, 0), (1, 0), (2, 0)],  # Column 1
+        [(0, 1), (1, 1), (2, 1)],  # Column 2
+        [(0, 2), (1, 2), (2, 2)],  # Column 3
+        [(0, 0), (1, 1), (2, 2)],  # Diagonal from top-left to bottom-right
+        [(0, 2), (1, 1), (2, 0)]  # Diagonal from top-right to bottom-left
+    ]
     player = bot_identity
     bot = 3 - bot_identity
     is_player_turn = (3 - board.current_player(state)) == player
     player_score = 0
     bot_score = 0
     total_score = 0
-    box_state = {}
+    board_state = {}
     for r in range(0, 3):
         for c in range(0, 3):
-            score, _ = get_subbox_score(board, state, r, c, bot_identity)
+            action = (r, c, 0, 0)
+            score, _ = get_subbox_score(board, state, action, bot_identity)
             total_score += score
             if score == 0:
-                box_state[(r, c)] = 0
+                board_state[(r, c)] = 0
             if score < 0:
-                box_state[(r, c)] = 0 if is_player_turn else 1
+                board_state[(r, c)] = player if is_player_turn else bot
             else:
-                box_state[(r, c)] = 1 if is_player_turn else 0
-    return total_score
+                board_state[(r, c)] = bot if is_player_turn else player
+
+    for combination in winning_combinations:
+        values = [board_state[position] for position in combination]
+        if all(value == 0 for value in values):
+            player_score += 1
+            bot_score += 1
+        elif all(value == player for value in values):
+            player_score = 8
+            bot_score = 0
+            break
+        elif all(value == bot for value in values):
+            bot_score = 8
+            player_score = 0
+            break
+        elif player in values and bot in values:
+            continue
+        if player in values:
+            player_score += 1
+        if bot in values:
+            bot_score += 1
+
+    return (player_score - bot_score) if is_player_turn else (bot_score - player_score), ""
 
 
 def rollout(board: Board, state, bot_identity: int):
@@ -261,11 +293,7 @@ def rollout(board: Board, state, bot_identity: int):
     is_player_turn = board.current_player(state) == bot_identity
     while not board.is_ended(state):
         actions = board.legal_actions(state)
-        if (1, 1, 1, 1) in actions:
-            print(f'chose (1, 1, 1, 1)')
-            state = board.next_state(state, (1, 1, 1, 1))
-            is_player_turn = not is_player_turn
-            continue
+        # state = board.next_state(state, choice(actions))
         if not is_player_turn:
             state = board.next_state(state, choice(actions))
             is_player_turn = not is_player_turn
@@ -277,12 +305,13 @@ def rollout(board: Board, state, bot_identity: int):
             if board.is_ended(next_state) and is_win(board, next_state, bot_identity):
                 return next_state
             score, _ = get_subbox_score(board, next_state, action, bot_identity)
-            print(f"action: {action} | score: {score}")
+            # score, _ = get_heuristic(board, next_state, bot_identity)
+            # print(f"action: {action} | score: {score}")
             # score = get_heuristic(board, next_state, bot_identity)
             if score > best_score:
                 best_action = action
                 best_score = score
-        print(f'chose {best_action}')
+        # print(f'chose {best_action}')
         state = board.next_state(state, best_action)
         is_player_turn = not is_player_turn
     return state
@@ -380,12 +409,12 @@ def think(board: Board, current_state):
     # Return an action, typically the most frequently used action (from the root) or the action with the best
     # estimated win rate.
     best_action = get_best_action(root_node)
-    temp_state = board.next_state(current_state, best_action)
+    '''temp_state = board.next_state(current_state, best_action)
 
     h, board_state = get_subbox_score(board, temp_state, best_action, bot_identity)
     print(board_state)
     # h = get_heuristic(board, temp_state, bot_identity)
     print("Heuristic: ", h)
 
-    print(f"Action chosen: {best_action}")
+    print(f"Action chosen: {best_action}")'''
     return best_action
