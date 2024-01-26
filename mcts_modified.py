@@ -1,9 +1,11 @@
+import random
+
 from mcts_node import MCTSNode
 from p2_t3 import Board
 from random import choice
 from math import sqrt, log, e
 
-num_nodes = 250
+num_nodes = 500
 explore_faction = 2.
 
 positions = dict(
@@ -104,7 +106,7 @@ def get_cell_owner(state, board_r, board_c, pos_r, pos_c):
     return 0
 
 
-def make_board(action, next_state, board):
+def make_board(action, next_state):
     board_row = action[0]
     board_col = action[1]
     b = {(0, 0): get_cell_owner(next_state, board_row, board_col, 0, 0),
@@ -130,23 +132,49 @@ def get_subbox_score(board: Board, state, action, bot_identity):
         [(0, 0), (1, 1), (2, 2)],  # Diagonal from top-left to bottom-right
         [(0, 2), (1, 1), (2, 0)]  # Diagonal from top-right to bottom-left
     ]
-    unpack = board.unpack_state(state)
-    board_row = action[0]
-    board_col = action[1]
-    b = {(0, 0): 0, (0, 1): 0, (0, 2): 0, (1, 0): 0, (1, 1): 0, (1, 2): 0, (2, 0): 0, (2, 1): 0, (2, 2): 0}
-    for piece in unpack['pieces']:
-        if piece['outer-row'] == board_row and piece['outer-column'] == board_col:
-            row_index = piece['inner-row']
-            col_index = piece['inner-column']
-            b[(row_index, col_index)] = piece['player']
+    # unpack = board.unpack_state(state)
+    # board_row = action[0]
+    # board_col = action[1]
+    b = make_board(action, state)
 
-    player_score = bot_score = 0
+    player_score = 0
+    bot_score = 0
     player = bot_identity
     bot = 3 - bot_identity
-    is_player_turn = (3 - board.current_player(state)) == player
+    is_player_turn = ((3 - board.current_player(state)) == player)
+    debug_str = ""
     for combination in winning_combinations:
         values = [b[position] for position in combination]
-        if all(value == 0 for value in values):
+        p_pieces = 0
+        b_pieces = 0
+        empty_pieces = 0
+        for value in values:
+            if value == player:
+                p_pieces += 1
+            if value == bot:
+                b_pieces += 1
+            if value == 0:
+                empty_pieces += 1
+        # debug_str += f"player: {p_pieces}, bot: {b_pieces}, empty: {empty_pieces} | {combination} {values}\n"
+        if p_pieces == 3:
+            player_score = 8
+            bot_score = 0
+            break
+        if b_pieces == 3:
+            player_score = 0
+            bot_score = 8
+            break
+        if empty_pieces == 3:
+            player_score += 1
+            bot_score += 1
+        elif p_pieces == b_pieces == 1:
+            pass
+        elif p_pieces > 0 and b_pieces == 0:
+            player_score += 1
+        elif b_pieces > 0 and p_pieces == 0:
+            bot_score += 1
+
+        '''if all(value == 0 for value in values):
             player_score += 1
             bot_score += 1
         elif all(value == player for value in values):
@@ -162,9 +190,9 @@ def get_subbox_score(board: Board, state, action, bot_identity):
         if player in values:
             player_score += 1
         if bot in values:
-            bot_score += 1
+            bot_score += 1'''
 
-    debug_msg = f"{action}\n{b}\n player score: {player_score} | bot score: {bot_score} "
+    debug_msg = ''# f"{action}\n{b}\n pieces: {debug_str}\n player score: {player_score} | bot score: {bot_score} "
     return (player_score - bot_score) if is_player_turn else (bot_score - player_score), debug_msg
 
 
@@ -180,13 +208,11 @@ def rollout(board: Board, state, bot_identity: int):
         state: The terminal game state
 
     """
-
+    bot_identity = board.current_player(state)
     while not board.is_ended(state):
-        is_player_turn = board.current_player(state) == bot_identity
         actions = board.legal_actions(state)
-        if not is_player_turn:
-            state = board.next_state(state, choice(actions))
-            continue
+        # action = choice(actions)
+        # state = board.next_state(state, action)
         best_score = float('-inf')
         best_action = None
         for action in actions:
@@ -293,4 +319,8 @@ def think(board: Board, current_state):
     # Return an action, typically the most frequently used action (from the root) or the action with the best
     # estimated win rate.
     best_action = get_best_action(root_node)
+    temp_state = board.next_state(current_state, best_action)
+    h, _ = get_subbox_score(board, temp_state, best_action, bot_identity)
+    #print(f"{best_action}: h: {h} \n {_}")
+    #print(f"Action chosen: {best_action}")
     return best_action
