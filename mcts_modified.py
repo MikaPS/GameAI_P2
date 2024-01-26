@@ -156,7 +156,6 @@ def rollout(board: Board, state, bot_identity: int):
     is_player_turn = board.current_player(state) == bot_identity
     while not board.is_ended(state):
         actions = board.legal_actions(state)
-        # state = board.next_state(state, choice(actions))
         if not is_player_turn:
             state = board.next_state(state, choice(actions))
             is_player_turn = not is_player_turn
@@ -168,13 +167,9 @@ def rollout(board: Board, state, bot_identity: int):
             if board.is_ended(next_state) and is_win(board, next_state, bot_identity):
                 return next_state
             score, _ = get_subbox_score(board, next_state, action, bot_identity)
-            # score, _ = get_heuristic(board, next_state, bot_identity)
-            # print(f"action: {action} | score: {score}")
-            # score = get_heuristic(board, next_state, bot_identity)
             if score > best_score:
                 best_action = action
                 best_score = score
-        # print(f'chose {best_action}')
         state = board.next_state(state, best_action)
         is_player_turn = not is_player_turn
     return state
