@@ -91,90 +91,6 @@ def expand_leaf(node: MCTSNode, board: Board, state):
     return None, state
 
 
-def get_cell_owner(state, board_r, board_c, pos_r, pos_c):
-    board_index = 3 * board_r + board_c
-    p1_bitmask = state[2 * board_index]
-    p2_bitmask = state[2 * board_index + 1]
-    is_p1 = (p1_bitmask & positions[(pos_r, pos_c)]) > 0
-    is_p2 = (p2_bitmask & positions[(pos_r, pos_c)]) > 0
-    if is_p1:
-        return 1
-    if is_p2:
-        return 2
-    return 0
-
-
-def get_box_score(board: Board, state, bot_identity):
-    board_state = board.owned_boxes(state)
-    player = bot_identity
-    bot = 3 - bot_identity
-    is_player_turn = board.current_player(state) == player
-    player_score = 0
-    bot_score = 0
-    for r in range(3):
-        row = [board_state[(r, 0)], board_state[(r, 1)], board_state[(r, 2)]]
-        if all(row) is player:
-            return 8 if is_player_turn else -8
-        elif all(row) is bot:
-            return -8 if is_player_turn else 8
-        if player in row and bot in row:
-            continue
-        elif player in row:
-            player_score += 1
-        elif bot in row:
-            bot_score += 1
-        else:
-            player_score += 1
-            bot_score += 1
-
-    for c in range(3):
-        col = [board_state[(0, c)], board_state[(1, c)], board_state[(2, c)]]
-        if all(col) is player:
-            return 8 if is_player_turn else -8
-        elif all(col) is bot:
-            return -8 if is_player_turn else 8
-        if player in col and bot in col:
-            continue
-        elif player in col:
-            player_score += 1
-        elif bot in col:
-            bot_score += 1
-        else:
-            player_score += 1
-            bot_score += 1
-
-    diag = [board_state[(0, 0)], board_state[(1, 1)], board_state[(2, 2)]]
-    if all(diag) is player:
-        return 8 if is_player_turn else -8
-    elif all(diag) is bot:
-        return -8 if is_player_turn else 8
-    if player in diag and bot in diag:
-        pass
-    elif player in diag:
-        player_score += 1
-    elif bot in diag:
-        bot_score += 1
-    else:
-        player_score += 1
-        bot_score += 1
-
-    diag = [board_state[(0, 2)], board_state[(1, 1)], board_state[(2, 0)]]
-    if all(diag) is player:
-        return 8 if is_player_turn else -8
-    elif all(diag) is bot:
-        return -8 if is_player_turn else 8
-    if player in diag and bot in diag:
-        pass
-    elif player in diag:
-        player_score += 1
-    elif bot in diag:
-        bot_score += 1
-    else:
-        player_score += 1
-        bot_score += 1
-    return (player_score - bot_score) if is_player_turn else (bot_score - player_score)
-
-
 def get_subbox_score(board: Board, state, action, bot_identity):
     winning_combinations = [
         [(0, 0), (0, 1), (0, 2)],  # Row 1
@@ -222,59 +138,6 @@ def get_subbox_score(board: Board, state, action, bot_identity):
 
     debug_msg = f"{action}\n{b}\n player score: {player_score} | bot score: {bot_score} "
     return (player_score - bot_score) if is_player_turn else (bot_score - player_score), debug_msg
-
-
-def get_heuristic(board: Board, state, bot_identity):
-    winning_combinations = [
-        [(0, 0), (0, 1), (0, 2)],  # Row 1
-        [(1, 0), (1, 1), (1, 2)],  # Row 2
-        [(2, 0), (2, 1), (2, 2)],  # Row 3
-        [(0, 0), (1, 0), (2, 0)],  # Column 1
-        [(0, 1), (1, 1), (2, 1)],  # Column 2
-        [(0, 2), (1, 2), (2, 2)],  # Column 3
-        [(0, 0), (1, 1), (2, 2)],  # Diagonal from top-left to bottom-right
-        [(0, 2), (1, 1), (2, 0)]  # Diagonal from top-right to bottom-left
-    ]
-    player = bot_identity
-    bot = 3 - bot_identity
-    is_player_turn = (3 - board.current_player(state)) == player
-    player_score = 0
-    bot_score = 0
-    total_score = 0
-    board_state = {}
-    for r in range(0, 3):
-        for c in range(0, 3):
-            action = (r, c, 0, 0)
-            score, _ = get_subbox_score(board, state, action, bot_identity)
-            total_score += score
-            if score == 0:
-                board_state[(r, c)] = 0
-            if score < 0:
-                board_state[(r, c)] = player if is_player_turn else bot
-            else:
-                board_state[(r, c)] = bot if is_player_turn else player
-
-    for combination in winning_combinations:
-        values = [board_state[position] for position in combination]
-        if all(value == 0 for value in values):
-            player_score += 1
-            bot_score += 1
-        elif all(value == player for value in values):
-            player_score = 8
-            bot_score = 0
-            break
-        elif all(value == bot for value in values):
-            bot_score = 8
-            player_score = 0
-            break
-        elif player in values and bot in values:
-            continue
-        if player in values:
-            player_score += 1
-        if bot in values:
-            bot_score += 1
-
-    return (player_score - bot_score) if is_player_turn else (bot_score - player_score), ""
 
 
 def rollout(board: Board, state, bot_identity: int):
@@ -409,12 +272,4 @@ def think(board: Board, current_state):
     # Return an action, typically the most frequently used action (from the root) or the action with the best
     # estimated win rate.
     best_action = get_best_action(root_node)
-    '''temp_state = board.next_state(current_state, best_action)
-
-    h, board_state = get_subbox_score(board, temp_state, best_action, bot_identity)
-    print(board_state)
-    # h = get_heuristic(board, temp_state, bot_identity)
-    print("Heuristic: ", h)
-
-    print(f"Action chosen: {best_action}")'''
     return best_action
