@@ -7,16 +7,6 @@ num_nodes = 1000
 explore_faction = 2.
 
 
-def calculates_score(node: MCTSNode, child: MCTSNode):
-    wins = child.wins
-    visits = child.visits
-    total_visits = node.visits
-    exploitation_factor = (wins / visits)
-    exploration_factor = explore_faction * sqrt(log(total_visits, e) / visits)
-    value = exploitation_factor + exploration_factor
-    return value
-
-
 def traverse_nodes(node: MCTSNode, board: Board, state, bot_identity: int):
     """ Traverses the tree until the end criterion are met.
     e.g. find the best expandable node (node with untried action) if it exist,
@@ -49,7 +39,7 @@ def traverse_nodes(node: MCTSNode, board: Board, state, bot_identity: int):
         if node.untried_actions:
             return node, state
 
-        #terminal node
+        # terminal node
         if not node.untried_actions and not node.child_nodes:
             return node, state
 
