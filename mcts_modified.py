@@ -3,7 +3,7 @@ from p2_t3 import Board
 from random import choice
 from math import sqrt, log, e
 
-num_nodes = 1000
+num_nodes = 250
 explore_faction = 2.
 
 positions = dict(
@@ -91,6 +91,34 @@ def expand_leaf(node: MCTSNode, board: Board, state):
     return None, state
 
 
+def get_cell_owner(state, board_r, board_c, pos_r, pos_c):
+    board_index = 3 * board_r + board_c
+    p1_bitmask = state[2 * board_index]
+    p2_bitmask = state[2 * board_index + 1]
+    is_p1 = (p1_bitmask & positions[(pos_r, pos_c)]) > 0
+    is_p2 = (p2_bitmask & positions[(pos_r, pos_c)]) > 0
+    if is_p1:
+        return 1
+    if is_p2:
+        return 2
+    return 0
+
+
+def make_board(action, next_state, board):
+    board_row = action[0]
+    board_col = action[1]
+    b = {(0, 0): get_cell_owner(next_state, board_row, board_col, 0, 0),
+         (0, 1): get_cell_owner(next_state, board_row, board_col, 0, 1),
+         (0, 2): get_cell_owner(next_state, board_row, board_col, 0, 2),
+         (1, 0): get_cell_owner(next_state, board_row, board_col, 1, 0),
+         (1, 1): get_cell_owner(next_state, board_row, board_col, 1, 1),
+         (1, 2): get_cell_owner(next_state, board_row, board_col, 1, 2),
+         (2, 0): get_cell_owner(next_state, board_row, board_col, 2, 0),
+         (2, 1): get_cell_owner(next_state, board_row, board_col, 2, 1),
+         (2, 2): get_cell_owner(next_state, board_row, board_col, 2, 2)}
+    return b
+
+
 def get_subbox_score(board: Board, state, action, bot_identity):
     winning_combinations = [
         [(0, 0), (0, 1), (0, 2)],  # Row 1
@@ -153,12 +181,11 @@ def rollout(board: Board, state, bot_identity: int):
 
     """
 
-    is_player_turn = board.current_player(state) == bot_identity
     while not board.is_ended(state):
+        is_player_turn = board.current_player(state) == bot_identity
         actions = board.legal_actions(state)
         if not is_player_turn:
             state = board.next_state(state, choice(actions))
-            is_player_turn = not is_player_turn
             continue
         best_score = float('-inf')
         best_action = None
@@ -171,7 +198,6 @@ def rollout(board: Board, state, bot_identity: int):
                 best_action = action
                 best_score = score
         state = board.next_state(state, best_action)
-        is_player_turn = not is_player_turn
     return state
 
 
