@@ -5,7 +5,7 @@ from p2_t3 import Board
 from random import choice
 from math import sqrt, log, e
 
-num_nodes = 500
+num_nodes = 100
 explore_faction = 2.
 
 positions = dict(
@@ -169,6 +169,8 @@ def get_subbox_score(board: Board, state, action, bot_identity):
             bot_score += 1
         elif p_pieces == b_pieces == 1:
             pass
+        #elif p_pieces == 1 and b_pieces == 2:
+        #    player_score += 2
         elif p_pieces > 0 and b_pieces == 0:
             player_score += 1
         elif b_pieces > 0 and p_pieces == 0:
@@ -319,8 +321,6 @@ def think(board: Board, current_state):
     # Return an action, typically the most frequently used action (from the root) or the action with the best
     # estimated win rate.
     best_action = get_best_action(root_node)
-    temp_state = board.next_state(current_state, best_action)
-    h, _ = get_subbox_score(board, temp_state, best_action, bot_identity)
-    #print(f"{best_action}: h: {h} \n {_}")
-    #print(f"Action chosen: {best_action}")
+
+    print(f"Action chosen: {best_action}")
     return best_action

@@ -3,7 +3,7 @@ from p2_t3 import Board
 from random import choice
 from math import sqrt, log, e
 
-num_nodes = 1000
+num_nodes = 100
 explore_faction = 2.
 
 
